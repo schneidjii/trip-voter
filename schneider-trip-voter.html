@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schneider Family Trip Voter</title>
+<style>
+  :root{
+    --forest:#1f3d2b; --pine:#2c5f3f; --moss:#7fa66a; --gold:#e8b04b;
+    --cream:#f6f2e9; --ink:#22271f; --line:#dfe0d4; --muted:#6c7166;
+    --hard:#c1462f; --add:#3f7a52; --card:#ffffff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Helvetica,Arial,sans-serif;background:var(--cream);
+    color:var(--ink);line-height:1.35;padding:14px;max-width:780px;margin:0 auto}
+  .header{margin-bottom:12px}
+  .title{font-size:1.5rem;font-weight:800;color:var(--forest)}
+  .subtitle{font-size:.82rem;color:var(--muted);margin-top:2px}
+  .tabs{display:flex;gap:8px;margin-top:14px}
+  .tab{flex:1;padding:11px 8px;border:1px solid var(--line);background:#fff;border-radius:12px;
+    font-size:.95rem;font-weight:700;color:var(--muted);cursor:pointer;transition:.15s}
+  .tab.active{background:var(--forest);color:#fff;border-color:var(--forest)}
+  .name-row{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .name-label{font-weight:700;font-size:.9rem}
+  .name-input{flex:1;min-width:130px;padding:9px 12px;border:2px solid var(--gold);border-radius:10px;
+    font-size:1rem;background:#fff}
+  .status{font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:99px}
+  .status.on{color:#1f7a3d;background:#e4f3e9}
+  .status.off{color:#9a7b1e;background:#f6eecf}
+  .view-toggle{display:flex;gap:6px;margin-top:12px;background:#eae6d9;padding:4px;border-radius:12px}
+  .vt{flex:1;padding:8px;border:none;background:transparent;border-radius:9px;font-weight:700;
+    font-size:.9rem;color:var(--muted);cursor:pointer}
+  .vt.active{background:#fff;color:var(--forest);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+  .legend{font-size:.7rem;color:var(--muted);margin-top:10px;padding:2px}
+  .content{margin-top:8px}
+  .notice{background:#fff;border:1px dashed var(--gold);border-radius:12px;padding:14px;font-size:.9rem}
+  .progress{font-size:.82rem;color:var(--muted);font-weight:600;padding:6px 2px 10px}
+  .group{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden}
+  .gsummary{padding:12px 14px;font-weight:800;color:var(--forest);cursor:pointer;font-size:.98rem;
+    list-style:none;background:#fbfaf5}
+  .gsummary::-webkit-details-marker{display:none}
+  .gsummary::before{content:'▸ ';color:var(--moss)}
+  details[open] .gsummary::before{content:'▾ '}
+  .rows{padding:2px 0}
+  .pcell{border-top:1px solid #f0efe6}
+  .prow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px}
+  .pleft{display:flex;align-items:flex-start;gap:9px;flex:1;min-width:0}
+  .info-btn{flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);
+    background:#fff;color:var(--moss);font-size:.95rem;font-weight:700;cursor:pointer;line-height:1;padding:0}
+  .info-btn.open{background:var(--moss);color:#fff;border-color:var(--moss)}
+  .pinfo{flex:1;min-width:0}
+  .pname-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .pname{font-weight:600;font-size:.96rem}
+  .pnote{font-size:.76rem;color:var(--muted);margin-top:1px}
+  .prov{font-size:.8rem;font-weight:800;color:#b9a25a;cursor:help}
+  .prov2{color:#c98a3e}
+  .badge{font-size:.62rem;font-weight:800;padding:2px 6px;border-radius:6px;white-space:nowrap}
+  .badge-hard{background:var(--hard);color:#fff}
+  .scores{display:flex;gap:4px;flex-shrink:0}
+  .score{width:34px;height:34px;border:1px solid var(--line);background:#fff;border-radius:8px;
+    font-weight:700;font-size:.9rem;color:var(--muted);cursor:pointer;transition:.12s}
+  .score:hover{border-color:var(--moss)}
+  .score.picked{background:var(--gold);border-color:var(--gold);color:#3a2e10;transform:scale(1.06)}
+  .info-panel{display:flex;gap:12px;padding:0 14px 14px 49px;flex-wrap:wrap}
+  .info-img{width:150px;height:100px;border-radius:10px;overflow:hidden;background:#eee;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center}
+  .info-img.loading-img{background:linear-gradient(90deg,#eee,#f6f6f6,#eee)}
+  .info-img.no-img{background:#e6efe8}
+  .no-img-txt{font-size:1.8rem;opacity:.5}
+  .wimg{width:100%;height:100%;object-fit:cover;display:block}
+  .info-body{flex:1;min-width:200px;font-size:.85rem}
+  .info-what{color:var(--ink);margin-bottom:8px;line-height:1.4}
+  .wlink{color:var(--pine);font-weight:600;text-decoration:none;white-space:nowrap}
+  .info-love,.info-caution{display:flex;gap:7px;margin-top:5px;align-items:baseline}
+  .lbl{font-size:.66rem;font-weight:800;padding:2px 7px;border-radius:6px;white-space:nowrap;flex-shrink:0}
+  .lbl-love{background:#e6f0e9;color:var(--add)}
+  .lbl-caution{background:#f6ecd6;color:#9a7b1e}
+  .info-love-txt,.info-caution-txt{color:#3c4139}
+  .results-head{font-size:.82rem;color:var(--muted);font-weight:600;padding:4px 2px 10px}
+  .abtally{display:flex;align-items:stretch;gap:8px;margin-bottom:14px}
+  .ab{flex:1;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+  .ab.win{border-color:var(--gold);box-shadow:0 2px 10px rgba(232,176,75,.3)}
+  .ab-lbl{font-size:.74rem;font-weight:700;color:var(--muted)}
+  .ab-avg{font-size:1.6rem;font-weight:800;color:var(--forest);margin-top:2px}
+  .ab-vs{display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;
+    color:var(--pine);text-align:center;width:90px;flex-shrink:0}
+  .copy-btn{width:100%;padding:11px;border:1px solid var(--pine);background:#fff;color:var(--pine);
+    border-radius:10px;font-weight:700;font-size:.9rem;cursor:pointer;margin-bottom:12px}
+  .copy-btn:hover{background:var(--pine);color:#fff}
+  .copy-fallback{width:100%;height:120px;margin-bottom:10px;font-size:.75rem;padding:8px;border-radius:8px;border:1px solid var(--line)}
+  .rank-list{display:flex;flex-direction:column;gap:8px}
+  .rank-row{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);
+    border-radius:12px;padding:10px 12px}
+  .rank-num{font-size:1rem;font-weight:800;color:var(--moss);width:26px;text-align:center;flex-shrink:0}
+  .rank-main{flex:1;min-width:0}
+  .rank-name-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .rank-name{font-weight:700;font-size:.95rem}
+  .rank-state{font-size:.72rem;color:var(--muted)}
+  .bar{height:7px;background:#eee;border-radius:99px;margin-top:6px;overflow:hidden}
+  .bar-fill{height:100%;background:linear-gradient(90deg,var(--moss),var(--gold));border-radius:99px}
+  .rank-score{text-align:right;flex-shrink:0;min-width:52px}
+  .rank-avg{font-size:1.15rem;font-weight:800;color:var(--forest)}
+  .rank-count{font-size:.68rem;color:var(--muted)}
+  .footer{text-align:center;font-size:.7rem;color:var(--muted);padding:16px 0 4px}
+</style>
+</head>
+<body>
+  <div id="app"></div>
+  <div class="footer">Votes sync live to your Schneider-apps Firebase · photos load from Wikipedia · tap a score again to clear it</div>
+
+  <!-- Firebase compat SDK (v9.23.0), separate script tags per your stack -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script>
+    // ==== schneider-apps config (same project as Scout Study Guide) ====
+    var firebaseConfig = {
+      apiKey: "AIzaSyAFky57CziUVpPtwBkE8CNUxqHfrApzPB4",
+      authDomain: "schneider-apps.firebaseapp.com",
+      databaseURL: "https://schneider-apps-default-rtdb.firebaseio.com",
+      projectId: "schneider-apps",
+      storageBucket: "schneider-apps.firebasestorage.app",
+      messagingSenderId: "680708968242",
+      appId: "1:680708968242:web:80529bfb2ac352ee42112b",
+      measurementId: "G-2WEGB96B7X"
+    };
+    // expose a ready handle for the app logic (window._fbReady.db)
+    window._fbReady = { db: null };
+    try {
+      if (window.firebase && firebase.initializeApp) {
+        firebase.initializeApp(firebaseConfig);
+        window._fbReady.db = firebase.database();
+      }
+    } catch (e) { /* app runs in local-only mode if this fails */ }
+  </script>
+
+  <!-- Data + app -->
+  <script>
+/* Schneider Family Trip Voter — DATA
+   tag: 'hers'=on wife's list (*), 'mentioned'=DJ called out (**),
+        'add'=Claude-added must-see (no mark), 'hard'=locked (★)
+   region (west only): 'sw'=Plan A Southwest, 'north'=Plan B Northern,
+        'both'=both plans, 'other'=connector/neither
+*/
+window.TRIP_DATA = {
+  summer: {
+    label: "This Summer · Jul 23 – Aug 2",
+    sub: "OH · WV · KY · TN — hotels, no camping · Cedar Point locked 7/31",
+    groups: [
+      { state: "Ohio", places: [
+        { id:"oh_cedar", name:"Cedar Point", note:"Roller-coaster capital", tag:"hard", wiki:"Cedar Point",
+          love:"One of the best coaster line-ups on Earth — 16+ world-class rides in one park.",
+          caution:"Peak-summer crowds and heat mean long lines; a full day on your feet." },
+        { id:"oh_rock", name:"Rock & Roll Hall of Fame", note:"Cleveland, on Lake Erie", tag:"add", wiki:"Rock and Roll Hall of Fame",
+          love:"Music history brought to life — costumes, instruments, hands-on exhibits.",
+          caution:"Lands flat for kids who aren't into the music; a couple hours, not a day." },
+        { id:"oh_hocking", name:"Hocking Hills State Park", note:"Gorges & waterfalls", tag:"add", wiki:"Hocking Hills State Park",
+          love:"Gorgeous, easy gorge-and-waterfall hikes the whole family can do together.",
+          caution:"Very crowded on summer weekends; trails get muddy and slick." },
+        { id:"oh_airforce", name:"Nat'l Museum of the US Air Force", note:"Dayton — free", tag:"add", wiki:"National Museum of the United States Air Force",
+          love:"Enormous and free — real bombers, presidential planes, a Space Shuttle trainer.",
+          caution:"Miles of walking; can overwhelm younger kids who aren't plane-crazy." },
+        { id:"oh_football", name:"Pro Football Hall of Fame", note:"Canton", tag:"add", wiki:"Pro Football Hall of Fame",
+          love:"A shrine for football fans — interactive and genuinely well done.",
+          caution:"Easy to skip if nobody in the crew follows football." },
+        { id:"oh_cincyzoo", name:"Cincinnati Zoo", note:"Fiona the hippo", tag:"add", wiki:"Cincinnati Zoo and Botanical Garden",
+          love:"Top-rated zoo and home of Fiona the famous hippo.",
+          caution:"Summer heat makes animals sleepy and crowds heavy." }
+      ]},
+      { state: "West Virginia", places: [
+        { id:"wv_newriver", name:"New River Gorge Nat'l Park", note:"Newest national park", tag:"add", wiki:"New River Gorge National Park and Preserve",
+          love:"America's newest national park — a jaw-dropping bridge, rafting, and cliffs.",
+          caution:"Remote, and the best of it (rafting/climbing) needs outfitters and planning." },
+        { id:"wv_seneca", name:"Seneca Rocks", note:"Climbing crag", tag:"add", wiki:"Seneca Rocks",
+          love:"A striking rock fin you can hike up for a huge valley view.",
+          caution:"The trail up is steep; beyond the view there's not much else to do." }
+      ]},
+      { state: "Kentucky", places: [
+        { id:"ky_mammoth", name:"Mammoth Cave", note:"Longest cave on Earth", tag:"hers", wiki:"Mammoth Cave National Park",
+          love:"The longest cave system in the world — a cool 54°F and genuinely awe-inspiring.",
+          caution:"Popular tours book up early; tight passages can bother anyone claustrophobic." },
+        { id:"ky_ark", name:"Ark Encounter", note:"Life-size Noah's Ark", tag:"hers", wiki:"Ark Encounter",
+          love:"The sheer scale is stunning — a full-size Ark you can walk through.",
+          caution:"Pricey for a family, and its overt religious framing is a draw for some, less for others." },
+        { id:"ky_creation", name:"Creation Museum", note:"Near Ark Encounter", tag:"add", wiki:"Creation Museum",
+          love:"High-production exhibits, planetarium, and gardens; pairs with the Ark.",
+          caution:"Same ticket-price and worldview considerations as the Ark Encounter." },
+        { id:"ky_lincoln", name:"Abe Lincoln Birthplace", note:"Hodgenville NHP", tag:"hers", wiki:"Abraham Lincoln Birthplace National Historical Park",
+          love:"Stand where Lincoln was born — a memorial building over the historic cabin site.",
+          caution:"A short, quiet stop — more a checkbox than a half-day." },
+        { id:"ky_slugger", name:"Louisville Slugger Museum", note:"Giant bat + factory", tag:"add", wiki:"Louisville Slugger Museum & Factory",
+          love:"The world's biggest bat out front; factory tour ends with a free mini bat.",
+          caution:"Compact — an hour or two, not a destination on its own." },
+        { id:"ky_corvette", name:"Nat'l Corvette Museum", note:"Bowling Green", tag:"add", wiki:"National Corvette Museum",
+          love:"Car lovers' paradise, plus the wild story of the sinkhole that swallowed Corvettes.",
+          caution:"Niche — a big hit for gearheads, a shrug for everyone else." },
+        { id:"ky_cumberland", name:"Cumberland Falls", note:"The 'Moonbow'", tag:"add", wiki:"Cumberland Falls",
+          love:"A powerful waterfall famous for its rare 'moonbow' on clear full-moon nights.",
+          caution:"The moonbow only appears around the full moon — otherwise it's a (lovely) regular falls." }
+      ]},
+      { state: "Tennessee", places: [
+        { id:"tn_smoky", name:"Great Smoky Mountains NP", note:"Most-visited US park", tag:"add", wiki:"Great Smoky Mountains National Park",
+          love:"The most-visited national park in America — misty peaks, black bears, wildflowers, free entry.",
+          caution:"Gatlinburg's tourist strip and summer traffic can be a zoo; go early." },
+        { id:"tn_dollywood", name:"Dollywood", note:"Pigeon Forge", tag:"add", wiki:"Dollywood",
+          love:"Excellent coasters and shows, cleaner and friendlier than most big parks.",
+          caution:"Pricey, and hot/crowded at the height of summer." },
+        { id:"tn_nashville", name:"Nashville", note:"Music City", tag:"add", wiki:"Nashville, Tennessee",
+          love:"Live music everywhere and the Country Music Hall of Fame.",
+          caution:"Broadway is bar-and-honky-tonk territory — more adult than kid-focused." },
+        { id:"tn_chattanooga", name:"Rock City / Ruby Falls", note:"Lookout Mtn", tag:"add", wiki:"Ruby Falls",
+          love:"An underground waterfall and a 'see 7 states' overlook — quirky family fun.",
+          caution:"Touristy and pricey for what it is; can feel like a series of gift shops." },
+        { id:"tn_graceland", name:"Graceland", note:"Elvis — Memphis", tag:"hers", wiki:"Graceland",
+          love:"Elvis's mansion, jets, and jumpsuits — pure Americana pilgrimage.",
+          caution:"Memphis is a long detour to far-west TN; pricey and niche if you're not fans." }
+      ]},
+      { state: "Indiana (connector)", places: [
+        { id:"in_speedway", name:"Indianapolis Motor Speedway", note:"Museum + track laps", tag:"add", wiki:"Indianapolis Motor Speedway",
+          love:"Racing history and the chance to ride around the legendary oval.",
+          caution:"Niche unless someone's a motorsports fan." },
+        { id:"in_holiday", name:"Holiday World", note:"SW Indiana", tag:"add", wiki:"Holiday World & Splashin' Safari",
+          love:"Great value — free drinks, sunscreen, parking, and beloved wooden coasters.",
+          caution:"Smaller park in a corner of SW Indiana; a detour to reach." }
+      ]}
+    ]
+  },
+  west: {
+    label: "Next Year · The Big Western Trip",
+    sub: "Mom's master list, deduped & grouped, with must-see gaps filled",
+    groups: [
+      { state: "Utah", region:"sw", places: [
+        { id:"ut_zion", name:"Zion Nat'l Park", note:"", tag:"hers", region:"sw", wiki:"Zion National Park",
+          love:"Towering red canyon walls and the thrilling Narrows river hike.",
+          caution:"Shuttle-only and packed in summer; some hikes have serious drop-offs." },
+        { id:"ut_arches", name:"Arches Nat'l Park", note:"Delicate Arch", tag:"hers", region:"sw", wiki:"Arches National Park",
+          love:"2,000 stone arches including the iconic Delicate Arch.",
+          caution:"100°F+ in July; hiking ends by mid-morning and timed entry may apply." },
+        { id:"ut_bryce", name:"Bryce Canyon Nat'l Park", note:"Hoodoos", tag:"hers", region:"sw", wiki:"Bryce Canyon National Park",
+          love:"An amphitheater of orange spires (hoodoos) — unlike anywhere else; cool at 8,000 ft.",
+          caution:"High elevation surprises some; the best trails go down-then-up." },
+        { id:"ut_canyonlands", name:"Canyonlands Nat'l Park", note:"Completes the Mighty 5", tag:"add", region:"sw", wiki:"Canyonlands National Park",
+          love:"Vast Grand-Canyon-like overlooks with a fraction of the crowds.",
+          caution:"Big and remote; little shade and few services — bring water." },
+        { id:"ut_capitolreef", name:"Capitol Reef Nat'l Park", note:"Pie & orchards", tag:"add", region:"sw", wiki:"Capitol Reef National Park",
+          love:"The quiet Mighty-5 gem — historic orchards and famous homemade pie.",
+          caution:"Least 'wow' at first glance; charms are subtler than its neighbors." }
+      ]},
+      { state: "Arizona", region:"sw", places: [
+        { id:"az_grandcanyon", name:"Grand Canyon", note:"", tag:"hers", region:"sw", wiki:"Grand Canyon",
+          love:"The one everyone should see once — genuinely stops you in your tracks.",
+          caution:"South Rim crowds; kids can tire of 'another viewpoint' without a hike or program." },
+        { id:"az_sedona", name:"Sedona", note:"Red rock country", tag:"hers", region:"sw", wiki:"Sedona, Arizona",
+          love:"Stunning red-rock scenery, easy trails, and pink-Jeep tours.",
+          caution:"Upscale and busy; can feel touristy and pricey." },
+        { id:"az_antelope", name:"Antelope Canyon", note:"Tour required", tag:"hers", region:"sw", wiki:"Antelope Canyon",
+          love:"Otherworldly glowing slot-canyon walls — a photographer's dream.",
+          caution:"Navajo-guided tour required, timed and pricey; books out fast." },
+        { id:"az_horseshoe", name:"Horseshoe Bend", note:"", tag:"hers", region:"sw", wiki:"Horseshoe Bend (Arizona)",
+          love:"A jaw-dropping river bend viewed from the cliff edge.",
+          caution:"Short but hot, exposed walk; the unfenced edge is nerve-wracking with little kids." },
+        { id:"az_painted", name:"Painted Desert / Petrified Forest", note:"", tag:"hers", region:"sw", wiki:"Petrified Forest National Park",
+          love:"Rainbow badlands and 200-million-year-old stone logs.",
+          caution:"Very hot and shadeless; more a scenic drive than an activity park." },
+        { id:"az_tombstone", name:"Tombstone", note:"OK Corral", tag:"hers", region:"sw", wiki:"Tombstone, Arizona",
+          love:"Wild West living history — gunfight reenactments on dusty streets.",
+          caution:"Kitschy and touristy; a fun couple of hours, not much more." },
+        { id:"az_wave", name:"The Wave / Coyote Buttes", note:"Lottery permit", tag:"hers", region:"sw", wiki:"The Wave (Arizona)",
+          love:"A surreal wave of swirled sandstone — one of the most coveted photos in the West.",
+          caution:"Lottery permit only (hard to win), then a tough unmarked desert hike." },
+        { id:"az_monument", name:"Monument Valley", note:"Iconic buttes", tag:"add", region:"sw", wiki:"Monument Valley",
+          love:"The buttes from a thousand Westerns — unmistakably iconic.",
+          caution:"Remote; the scenic loop road is rough and the area is pricey." },
+        { id:"az_meteor", name:"Meteor Crater", note:"", tag:"add", region:"sw", wiki:"Meteor Crater",
+          love:"A mile-wide impact crater you can actually stand over.",
+          caution:"Privately run and pricey; it's essentially one (big) view." }
+      ]},
+      { state: "Colorado", region:"sw", places: [
+        { id:"co_mesa", name:"Mesa Verde Nat'l Park", note:"Cliff dwellings", tag:"hers", region:"sw", wiki:"Mesa Verde National Park",
+          love:"Cliff palaces built by Ancestral Puebloans — climb ladders into real dwellings.",
+          caution:"Ranger tours book up; some involve steep ladders and tight spaces." },
+        { id:"co_pikes", name:"Pikes Peak Cog Railway", note:"", tag:"hers", region:"sw", wiki:"Pikes Peak Cog Railway",
+          love:"Ride the rails to a 14,000-ft summit — big views, no hiking required.",
+          caution:"Pricey; altitude can cause headaches and it's cold at the top." },
+        { id:"co_durango", name:"Durango–Silverton Train", note:"Steam railroad", tag:"hers", region:"sw", wiki:"Durango and Silverton Narrow Gauge Railroad",
+          love:"A historic steam train through gorgeous, roadless mountain canyon.",
+          caution:"A full-day commitment and not cheap for a family." },
+        { id:"co_mineralfalls", name:"South Mineral Creek Falls", note:"", tag:"hers", region:"sw", wiki:"Silverton, Colorado",
+          love:"A pretty backcountry waterfall near Silverton, off the tourist path.",
+          caution:"Rough access road; niche stop best paired with the Durango area." },
+        { id:"co_blackcanyon", name:"Black Canyon of the Gunnison NP", note:"", tag:"hers", region:"sw", wiki:"Black Canyon of the Gunnison National Park",
+          love:"A dizzyingly deep, narrow, sheer-walled canyon — dramatic and uncrowded.",
+          caution:"Mostly overlooks; inner-canyon routes are extremely steep and advanced." },
+        { id:"co_trailridge", name:"Trail Ridge Rd / Rocky Mtn NP", note:"", tag:"hers", region:"sw", wiki:"Rocky Mountain National Park",
+          love:"America's highest paved through-road, into alpine tundra and elk country.",
+          caution:"Timed-entry permits in summer; weather turns fast up high." },
+        { id:"co_royalgorge", name:"Royal Gorge", note:"Bridge + rapids", tag:"hers", region:"sw", wiki:"Royal Gorge Bridge",
+          love:"One of the highest suspension bridges in the US, with a gondola and rafting.",
+          caution:"A paid attraction park; add-ons stack up in cost." },
+        { id:"co_gardengods", name:"Garden of the Gods", note:"", tag:"hers", region:"sw", wiki:"Garden of the Gods",
+          love:"Free park of soaring red-rock fins with easy paved paths — great for all ages.",
+          caution:"Popular and busy; parking fills midday." },
+        { id:"co_dinosaur", name:"Dinosaur Nat'l Monument", note:"Wall of bones", tag:"hers", region:"both", wiki:"Dinosaur National Monument",
+          love:"A cliff face of 1,500 real dinosaur bones kids can touch.",
+          caution:"Remote on the CO/UT line; hot in summer." },
+        { id:"co_sanddunes", name:"Great Sand Dunes Nat'l Park", note:"Tallest US dunes", tag:"add", region:"sw", wiki:"Great Sand Dunes National Park and Preserve",
+          love:"North America's tallest dunes — sledding down sand with a mountain backdrop.",
+          caution:"Sand hits 150°F midday; go morning/evening and haul your gear in." }
+      ]},
+      { state: "Wyoming", region:"both", places: [
+        { id:"wy_yellowstone", name:"Yellowstone", note:"", tag:"hers", region:"both", wiki:"Yellowstone National Park",
+          love:"Geysers, canyons, and the best wildlife-watching in America — a bucket-list must.",
+          caution:"Huge distances and summer crowds; bison jams are real." },
+        { id:"wy_tetons", name:"Grand Teton / Jackson Hole", note:"", tag:"hers", region:"both", wiki:"Grand Teton National Park",
+          love:"The most dramatic mountain skyline in the country, straight off Jackson Lake.",
+          caution:"Jackson is pricey; trails are bear country." },
+        { id:"wy_devils", name:"Devils Tower", note:"1st national monument", tag:"add", region:"both", wiki:"Devils Tower",
+          love:"An 867-ft volcanic tower that looks straight out of a movie; easy loop trail.",
+          caution:"Out of the way; it's essentially one (spectacular) sight." }
+      ]},
+      { state: "South Dakota", region:"both", places: [
+        { id:"sd_rushmore", name:"Mount Rushmore", note:"", tag:"hers", region:"both", wiki:"Mount Rushmore",
+          love:"The presidents in stone — bigger and more moving in person than you'd expect.",
+          caution:"It's mainly one view plus a short trail; the evening lighting is the highlight." },
+        { id:"sd_crazyhorse", name:"Crazy Horse Memorial", note:"", tag:"hers", region:"both", wiki:"Crazy Horse Memorial",
+          love:"An in-progress mountain carving dwarfing Rushmore, with rich Native history.",
+          caution:"Pricey, and the face is the only finished part after 75 years." },
+        { id:"sd_badlands", name:"Badlands", note:"", tag:"hers", region:"both", wiki:"Badlands National Park",
+          love:"Otherworldly striped spires, bison, and some of the darkest night skies in the US.",
+          caution:"Little shade and blazing hot midday; a scenic drive more than a hiking park." },
+        { id:"sd_blackhills", name:"Black Hills", note:"", tag:"hers", region:"both", wiki:"Black Hills",
+          love:"Forested hills full of wildlife, caves, and scenic drives — a great family base.",
+          caution:"It's a whole region; needs a couple days to do justice." },
+        { id:"sd_deadwood", name:"Deadwood", note:"Old West town", tag:"hers", region:"both", wiki:"Deadwood, South Dakota",
+          love:"Gold-rush history and Wild Bill's saloon in a preserved frontier town.",
+          caution:"Now casino-heavy; the history competes with gambling halls." },
+        { id:"sd_custer", name:"Custer State Park", note:"Bison, big-rig camping", tag:"add", region:"both", wiki:"Custer State Park",
+          love:"A free-roaming bison herd and the best big-rig camping in the region.",
+          caution:"Books a full year out for summer — the one to reserve earliest." },
+        { id:"sd_windcave", name:"Wind Cave Nat'l Park", note:"", tag:"add", region:"both", wiki:"Wind Cave National Park",
+          love:"A rare 'boxwork' cave below, bison prairie above — two parks in one.",
+          caution:"Cave tours are ranger-led and can sell out; the cave is less showy than Mammoth." }
+      ]},
+      { state: "Montana", region:"north", places: [
+        { id:"mt_glacier", name:"Glacier Nat'l Park", note:"Going-to-the-Sun Rd", tag:"hers", region:"north", wiki:"Glacier National Park (U.S.)",
+          love:"The crown of the continent — turquoise lakes and the epic Going-to-the-Sun Road.",
+          caution:"Vehicle-reservation system and 21-ft road limit; you'll shuttle the big rig." },
+        { id:"mt_lewisclark", name:"Lewis & Clark Caverns", note:"", tag:"hers", region:"north", wiki:"Lewis and Clark Caverns State Park",
+          love:"A beautiful guided cave tour through colorful formations.",
+          caution:"The tour involves lots of stairs and some tight, stooped passages." },
+        { id:"mt_bighorn", name:"Little Bighorn Battlefield", note:"Custer's Last Stand", tag:"add", region:"north", wiki:"Little Bighorn Battlefield National Monument",
+          love:"Walk the actual field of Custer's Last Stand — sobering and powerful.",
+          caution:"A reflective history stop, not an activity; hot and open." }
+      ]},
+      { state: "North Dakota", region:"north", places: [
+        { id:"nd_troosevelt", name:"Theodore Roosevelt NP", note:"Painted Canyon, wild horses", tag:"hers", region:"north", wiki:"Theodore Roosevelt National Park",
+          love:"The sleeper hit — wild horses, bison, and painted badlands nobody plans for.",
+          caution:"Off the beaten path; low-key compared to the marquee parks." }
+      ]},
+      { state: "California", region:"other", places: [
+        { id:"ca_yosemite", name:"Yosemite Nat'l Park", note:"", tag:"hers", region:"other", wiki:"Yosemite National Park",
+          love:"Granite giants and thundering waterfalls — one of the most beautiful places on Earth.",
+          caution:"Reservations required in peak season; valley crowds are intense." },
+        { id:"ca_sequoia", name:"Sequoia Nat'l Park", note:"Giant sequoias — the 'big trees'", tag:"mentioned", region:"other", wiki:"Sequoia National Park",
+          love:"The giant sequoias — the most massive trees on Earth, including General Sherman.",
+          caution:"Winding mountain roads; not the same as the coastal redwoods (see below)." },
+        { id:"ca_redwood", name:"Redwood Nat'l Park", note:"Coastal redwoods — the TALLEST trees", tag:"mentioned", region:"other", wiki:"Redwood National and State Parks",
+          love:"The tallest living things on Earth — misty, cathedral-like coastal forest (Endor!).",
+          caution:"Far up the NorCal coast — a real detour that pulls the whole trip west." },
+        { id:"ca_deathvalley", name:"Death Valley", note:"", tag:"hers", region:"sw", wiki:"Death Valley National Park",
+          love:"The hottest, lowest, most extreme landscape in the country — oddly mesmerizing.",
+          caution:"Genuinely dangerous heat in summer — a spring park, not a July one." },
+        { id:"ca_mobius", name:"Mobius Arch", note:"Alabama Hills", tag:"hers", region:"sw", wiki:"Alabama Hills",
+          love:"A rock arch that perfectly frames Mt. Whitney — a classic photo spot.",
+          caution:"Short and simple; rewards the photographer more than the restless kid." },
+        { id:"ca_alcatraz", name:"Alcatraz", note:"", tag:"hers", region:"other", wiki:"Alcatraz Island",
+          love:"The infamous island prison — a genuinely gripping audio tour.",
+          caution:"Ferry tickets sell out weeks ahead; it's a half-day in San Francisco." },
+        { id:"ca_goldengate", name:"Golden Gate Bridge", note:"", tag:"hers", region:"other", wiki:"Golden Gate Bridge",
+          love:"An icon in person — walk or bike across the most famous bridge in America.",
+          caution:"Often fogged in and windy; parking near it is a hassle." },
+        { id:"ca_hollywood", name:"Hollywood", note:"Sign + Walk of Fame", tag:"hers", region:"other", wiki:"Hollywood",
+          love:"Bucket-list Americana — the sign, the stars, the movie-magic buzz.",
+          caution:"The Walk of Fame is grittier and more crowded than people expect." },
+        { id:"ca_santabarbara", name:"Santa Barbara Mission", note:"", tag:"hers", region:"other", wiki:"Old Mission Santa Barbara",
+          love:"The 'Queen of the Missions' — beautiful Spanish-colonial church and grounds.",
+          caution:"A quiet, brief cultural stop rather than a kid-thrill." },
+        { id:"ca_kings", name:"Kings Canyon Nat'l Park", note:"Next to Sequoia", tag:"add", region:"other", wiki:"Kings Canyon National Park",
+          love:"A deep, dramatic canyon and more giant sequoia groves, right by Sequoia NP.",
+          caution:"Remote back-canyon; pairs with Sequoia or it's a long dead-end drive." }
+      ]},
+      { state: "Nevada", region:"sw", places: [
+        { id:"nv_hoover", name:"Hoover Dam", note:"", tag:"hers", region:"sw", wiki:"Hoover Dam",
+          love:"An engineering marvel spanning the Colorado — tours go deep inside.",
+          caution:"Blazing hot and busy; security lines and pricey tours." },
+        { id:"nv_vegas", name:"Las Vegas Strip", note:"", tag:"add", region:"sw", wiki:"Las Vegas Strip",
+          love:"Over-the-top spectacle — fountains, replicas, and free shows to gawk at.",
+          caution:"An adult playground at heart; heat and walking with kids can wear thin." },
+        { id:"nv_valleyfire", name:"Valley of Fire State Park", note:"", tag:"add", region:"sw", wiki:"Valley of Fire State Park",
+          love:"Blazing red sandstone and petroglyphs — a quieter, cheaper Zion-like taste.",
+          caution:"Extreme summer heat and little shade." }
+      ]},
+      { state: "New Mexico", region:"sw", places: [
+        { id:"nm_roswell", name:"Roswell", note:"UFO museum", tag:"hers", region:"sw", wiki:"Roswell, New Mexico",
+          love:"Campy alien fun — the UFO museum and themed everything.",
+          caution:"Kitschy and small; a fun half-day, easily overhyped." },
+        { id:"nm_carlsbad", name:"Carlsbad Caverns Nat'l Park", note:"Bat flight", tag:"add", region:"sw", wiki:"Carlsbad Caverns National Park",
+          love:"A colossal underground chamber, plus thousands of bats swirling out at dusk.",
+          caution:"Remote SE corner of NM; the big-room walk is long." },
+        { id:"nm_whitesands", name:"White Sands Nat'l Park", note:"", tag:"add", region:"sw", wiki:"White Sands National Park",
+          love:"Sledding down endless dunes of pure white gypsum — surreal and joyful.",
+          caution:"Blinding heat midday; occasional missile-range closures." },
+        { id:"nm_santafe", name:"Santa Fe", note:"", tag:"add", region:"sw", wiki:"Santa Fe, New Mexico",
+          love:"Adobe charm, art, and the best green chile you'll ever eat.",
+          caution:"More an adults' arts-and-food town than a kid destination." }
+      ]},
+      { state: "Oregon", region:"north", places: [
+        { id:"or_craterlake", name:"Crater Lake Nat'l Park", note:"", tag:"hers", region:"north", wiki:"Crater Lake National Park",
+          love:"The deepest, bluest lake in America, cradled in a volcano — unreal in person.",
+          caution:"Short season; snow can linger and it's a long way from anything." },
+        { id:"or_alvord", name:"Alvord Desert", note:"", tag:"hers", region:"north", wiki:"Alvord Desert",
+          love:"A surreal cracked-playa flat with hot springs — wonderfully weird and empty.",
+          caution:"Extremely remote with rough roads; true middle-of-nowhere." },
+        { id:"or_latourell", name:"Latourell Falls", note:"", tag:"hers", region:"north", wiki:"Latourell Falls",
+          love:"A striking Columbia Gorge waterfall with a short, easy loop.",
+          caution:"Small stop; best bundled with other Gorge falls." },
+        { id:"or_timbergulch", name:"Timber Gulch", note:"", tag:"hers", region:"north", wiki:"Owyhee Canyonlands",
+          love:"A hidden slot-canyon hike in Oregon's wild Owyhee country.",
+          caution:"Obscure and hard to reach; for the adventurous only." },
+        { id:"or_sealion", name:"Sea Lion Caves", note:"", tag:"hers", region:"north", wiki:"Sea Lion Caves",
+          love:"An elevator down to a giant sea cave full of wild sea lions.",
+          caution:"Touristy and smelly (it's a sea-lion cave!); quick stop." },
+        { id:"or_bend", name:"Bend / Sisters", note:"", tag:"hers", region:"north", wiki:"Bend, Oregon",
+          love:"An outdoorsy basecamp — rivers, lava lands, and mountain scenery.",
+          caution:"A region to explore, not a single sight; needs time." },
+        { id:"or_multnomah", name:"Multnomah Falls", note:"", tag:"add", region:"north", wiki:"Multnomah Falls",
+          love:"Oregon's tallest waterfall with its famous footbridge — a stunner right off the highway.",
+          caution:"Very crowded; timed permits may be required in summer." }
+      ]},
+      { state: "Washington", region:"north", places: [
+        { id:"wa_rainier", name:"Mt. Rainier", note:"", tag:"hers", region:"north", wiki:"Mount Rainier National Park",
+          love:"A massive glaciered volcano ringed by wildflower meadows — postcard-perfect.",
+          caution:"Weather hides the mountain often; timed entry in peak summer." },
+        { id:"wa_seattle", name:"Seattle Space Needle", note:"", tag:"hers", region:"north", wiki:"Space Needle",
+          love:"Iconic city views with a glass floor; pairs with Pike Place Market.",
+          caution:"Pricey elevator ride; downtown parking and crowds." },
+        { id:"wa_spokane", name:"Spokane", note:"", tag:"hers", region:"north", wiki:"Spokane, Washington",
+          love:"A walkable river-and-falls downtown park — a pleasant surprise.",
+          caution:"More a nice stopover than a marquee destination." },
+        { id:"wa_olympic", name:"Olympic Nat'l Park", note:"Rainforest + coast", tag:"add", region:"north", wiki:"Olympic National Park",
+          love:"Three parks in one — rainforest, wild beaches, and alpine peaks.",
+          caution:"Sprawling; the highlights are hours apart around the peninsula." },
+        { id:"wa_sthelens", name:"Mount St. Helens", note:"", tag:"add", region:"north", wiki:"Mount St. Helens",
+          love:"Stand before the volcano that famously blew its top in 1980.",
+          caution:"The best viewpoints are a long drive; often cloud-covered." }
+      ]},
+      { state: "Idaho", region:"north", places: [
+        { id:"id_priest", name:"Priest Lake", note:"", tag:"hers", region:"north", wiki:"Priest Lake",
+          love:"A pristine, quiet north-Idaho lake ringed by forest — real getaway vibes.",
+          caution:"Remote and best enjoyed with a boat; far off the main loop." },
+        { id:"id_craters", name:"Craters of the Moon", note:"Lava fields", tag:"add", region:"north", wiki:"Craters of the Moon National Monument and Preserve",
+          love:"Walk across black lava flows and into lava-tube caves — astronauts trained here.",
+          caution:"Stark and shadeless; blazing hot on summer afternoons." },
+        { id:"id_shoshone", name:"Shoshone Falls", note:"'Niagara of the West'", tag:"add", region:"north", wiki:"Shoshone Falls",
+          love:"A waterfall taller than Niagara, thundering through a desert canyon.",
+          caution:"Flow drops later in summer as water is diverted; best in spring." }
+      ]},
+      { state: "Texas", region:"sw", places: [
+        { id:"tx_alamo", name:"The Alamo", note:"", tag:"hers", region:"sw", wiki:"Alamo Mission in San Antonio",
+          love:"'Remember the Alamo' — the shrine of Texas independence, right downtown.",
+          caution:"Smaller than people expect; surrounded by tourist bustle." },
+        { id:"tx_riverwalk", name:"San Antonio Riverwalk", note:"", tag:"hers", region:"sw", wiki:"San Antonio River Walk",
+          love:"A festive canal of restaurants and boat rides — great evening stroll.",
+          caution:"Hot, humid, and crowded; touristy and pricey along the water." },
+        { id:"tx_paloduro", name:"Palo Duro Canyon", note:"2nd-largest US canyon", tag:"add", region:"sw", wiki:"Palo Duro Canyon",
+          love:"The 'Grand Canyon of Texas' — colorful, huge, and refreshingly uncrowded.",
+          caution:"Extreme Panhandle heat in summer; go early." }
+      ]},
+      { state: "Oklahoma", region:"other", places: [
+        { id:"ok_beavers", name:"Beavers Bend State Park", note:"", tag:"hers", region:"other", wiki:"Beavers Bend State Park",
+          love:"Forested lake-and-river park — canoeing, cabins, easy family nature.",
+          caution:"A regional getaway, not a headline sight." },
+        { id:"ok_comanche", name:"Comanche Nat'l Museum", note:"", tag:"hers", region:"other", wiki:"Comanche National Museum and Cultural Center",
+          love:"Rich Comanche history and culture told firsthand.",
+          caution:"Small and specialized; a focused stop." },
+        { id:"ok_cowboy", name:"Nat'l Cowboy Museum", note:"OKC", tag:"add", region:"other", wiki:"National Cowboy & Western Heritage Museum",
+          love:"A surprisingly great museum of Western art, rodeo, and frontier life.",
+          caution:"Indoors and history-focused; less for antsy little ones." }
+      ]},
+      { state: "Arkansas", region:"other", places: [
+        { id:"ar_hotsprings", name:"Hot Springs Nat'l Park", note:"", tag:"hers", region:"other", wiki:"Hot Springs National Park",
+          love:"A national park inside a town — historic bathhouses and thermal springs.",
+          caution:"Unusual 'park' — more historic strip than wilderness." },
+        { id:"ar_diamonds", name:"Crater of Diamonds", note:"Dig & keep gems", tag:"hers", region:"other", wiki:"Crater of Diamonds State Park",
+          love:"The only place you can dig for real diamonds and keep what you find.",
+          caution:"Hot, muddy fieldwork; most people find little — it's about the hunt." },
+        { id:"ar_turpentine", name:"Turpentine Creek Wildlife Refuge", note:"Big cats", tag:"hers", region:"other", wiki:"Turpentine Creek Wildlife Refuge",
+          love:"Rescued lions, tigers, and bears up close at a genuine refuge.",
+          caution:"Outdoor walking in Ozark heat; it's a rescue, not a polished zoo." },
+        { id:"ar_whitaker", name:"Whitaker Point (Hawksbill Crag)", note:"", tag:"hers", region:"other", wiki:"Hawksbill Crag",
+          love:"One of the most photographed overlooks in the mid-South.",
+          caution:"Roughish trail and an unfenced clifftop — mind the little ones." },
+        { id:"ar_ozark", name:"Ozark Ziplines", note:"", tag:"hers", region:"other", wiki:"Ozark Mountains",
+          love:"Fly through the Ozark forest canopy — a pure adrenaline hit for the kids.",
+          caution:"Height/age limits apply; weather can cancel." },
+        { id:"ar_trailoftears", name:"Trail of Tears site", note:"", tag:"hers", region:"other", wiki:"Trail of Tears",
+          love:"A meaningful, sobering piece of American history to walk and reflect on.",
+          caution:"Somber and interpretive; not a 'fun' stop but an important one." }
+      ]},
+      { state: "Missouri", region:"other", places: [
+        { id:"mo_arch", name:"Gateway Arch", note:"St. Louis", tag:"hers", region:"other", wiki:"Gateway Arch",
+          love:"Tram to the top of the tallest arch in the world for sweeping river views.",
+          caution:"The tram pods are tiny and snug; can bother claustrophobic riders." },
+        { id:"mo_branson", name:"Branson", note:"Shows + Silver Dollar City", tag:"add", region:"other", wiki:"Branson, Missouri",
+          love:"Family-show capital plus the excellent Silver Dollar City theme park.",
+          caution:"Very touristy and can feel dated; wallet-draining." }
+      ]},
+      { state: "Nebraska", region:"other", places: [
+        { id:"ne_chimney", name:"Chimney Rock", note:"Oregon Trail landmark", tag:"hers", region:"other", wiki:"Chimney Rock National Historic Site",
+          love:"The famous Oregon Trail spire pioneers steered by — history you can see.",
+          caution:"Essentially one distant view; a quick roadside stop." },
+        { id:"ne_oregontrail", name:"Oregon Trail sites", note:"", tag:"hers", region:"other", wiki:"Oregon Trail",
+          love:"Wagon ruts and pioneer landmarks — brings the westward journey alive.",
+          caution:"Spread out and interpretive; better for history-minded families." },
+        { id:"ne_doorly", name:"Henry Doorly Zoo", note:"Omaha", tag:"hers", region:"other", wiki:"Henry Doorly Zoo and Aquarium",
+          love:"Regularly rated a top zoo in the world — huge indoor rainforest and desert domes.",
+          caution:"A full day and a real detour if you're not near Omaha." }
+      ]},
+      { state: "Illinois", region:"other", places: [
+        { id:"il_bean", name:"The Bean (Millennium Park)", note:"Chicago", tag:"hers", region:"other", wiki:"Cloud Gate",
+          love:"The mirror-polished sculpture everyone photographs — playful and free.",
+          caution:"It's one sculpture; worth it only if you're touring Chicago anyway." },
+        { id:"il_lincoln", name:"Lincoln Home", note:"Springfield", tag:"hers", region:"other", wiki:"Lincoln Home National Historic Site",
+          love:"Tour the only home Lincoln ever owned, in a preserved historic neighborhood.",
+          caution:"A history stop; brief and low-key for kids." }
+      ]},
+      { state: "Wisconsin", region:"north", places: [
+        { id:"wi_apostle", name:"Apostle Islands", note:"Lake Superior sea caves", tag:"hers", region:"north", wiki:"Apostle Islands National Lakeshore",
+          love:"Kayak into Lake Superior sea caves and lighthouse-dotted islands.",
+          caution:"Cold water and weather-dependent; the caves need a boat or tour." },
+        { id:"wi_dells", name:"Wisconsin Dells", note:"Waterpark capital", tag:"add", region:"north", wiki:"Wisconsin Dells, Wisconsin",
+          love:"The Waterpark Capital of the World — pure kid payoff, plus river boat tours.",
+          caution:"Unabashedly touristy and pricey; sensory overload." }
+      ]},
+      { state: "Minnesota", region:"north", places: [
+        { id:"mn_blackbeach", name:"Black Beach", note:"Silver Bay", tag:"hers", region:"north", wiki:"Silver Bay, Minnesota",
+          love:"A striking black-sand beach on Lake Superior's North Shore.",
+          caution:"Cold water and remote; a scenic stop, not a swim day." }
+      ]},
+      { state: "Alabama", region:"other", places: [
+        { id:"al_gulf", name:"Gulf Shores", note:"", tag:"hers", region:"other", wiki:"Gulf Shores, Alabama",
+          love:"White-sand Gulf beaches and warm water — classic family beach time.",
+          caution:"Deep South and humid; well off any western loop." },
+        { id:"al_fortmorgan", name:"Fort Morgan", note:"", tag:"hers", region:"other", wiki:"Fort Morgan (Alabama)",
+          love:"A historic coastal fort guarding Mobile Bay — cannons and Civil War history.",
+          caution:"Hot and exposed; pairs with Gulf Shores or it's a long spur." }
+      ]}
+    ]
+  }
+};
+
+/* Schneider Family Trip Voter — app logic (Firebase-backed) */
+(function () {
+  "use strict";
+
+  var DATA = window.TRIP_DATA;
+
+  // ---------- STATE ----------
+  var state = {
+    trip: "summer",
+    view: "vote",
+    voter: "",
+    myVotes: { summer: {}, west: {} },
+    allVotes: { summer: {}, west: {} }, // {voterKey: {placeId: score}}
+    connected: false,
+    saveTimers: {},
+    wikiCache: {},
+    openInfo: {} // placeId -> true
+  };
+
+  // ---------- UTIL ----------
+  function sanitizeKey(name) {
+    // Firebase keys cannot contain . $ # [ ] / or control chars
+    return String(name).trim().replace(/[.$#\[\]\/\x00-\x1F\x7F]/g, "_").slice(0, 60) || "anon";
+  }
+  function safeLocalGet(k) {
+    try { return window.localStorage.getItem(k); } catch (e) { return null; }
+  }
+  function safeLocalSet(k, v) {
+    try { window.localStorage.setItem(k, v); } catch (e) { /* artifact sandbox blocks this; fine */ }
+  }
+
+  // ---------- FIREBASE ----------
+  var db = null;
+  function initFirebase() {
+    if (!window._fbReady || !window._fbReady.db) return false;
+    db = window._fbReady.db;
+    state.connected = true;
+    ["summer", "west"].forEach(function (trip) {
+      db.ref("tripVoter/votes/" + trip).on("value", function (snap) {
+        state.allVotes[trip] = snap.val() || {};
+        // refresh my own votes from server truth
+        var mk = sanitizeKey(state.voter);
+        if (state.voter && state.allVotes[trip][mk]) {
+          state.myVotes[trip] = Object.assign({}, state.allVotes[trip][mk]);
+        }
+        if (state.trip === trip) render();
+      }, function (err) {
+        state.connected = false;
+        render();
+      });
+    });
+    return true;
+  }
+
+  function writeVote(trip, placeId, score) {
+    var mk = sanitizeKey(state.voter);
+    // optimistic local
+    if (score == null) delete state.myVotes[trip][placeId];
+    else state.myVotes[trip][placeId] = score;
+    if (db && state.voter) {
+      var ref = db.ref("tripVoter/votes/" + trip + "/" + mk + "/" + placeId);
+      if (score == null) ref.remove();
+      else ref.set(score);
+    }
+  }
+
+  // ---------- WIKIPEDIA (live, in-browser) ----------
+  function loadWiki(title, cb) {
+    if (state.wikiCache[title]) { cb(state.wikiCache[title]); return; }
+    fetch("https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(title), { headers: { "Accept": "application/json" } })
+      .then(function (r) { if (!r.ok) throw new Error("http"); return r.json(); })
+      .then(function (d) {
+        var out = {
+          img: (d.originalimage && d.originalimage.source) || (d.thumbnail && d.thumbnail.source) || null,
+          extract: d.extract || "",
+          url: (d.content_urls && d.content_urls.desktop && d.content_urls.desktop.page) || ("https://en.wikipedia.org/wiki/" + encodeURIComponent(title))
+        };
+        state.wikiCache[title] = out;
+        cb(out);
+      })
+      .catch(function () {
+        var out = { img: null, extract: "", url: "https://en.wikipedia.org/wiki/" + encodeURIComponent(title) };
+        state.wikiCache[title] = out;
+        cb(out);
+      });
+  }
+
+  // ---------- DOM HELPERS ----------
+  function el(tag, attrs, kids) {
+    var n = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      if (k === "class") n.className = attrs[k];
+      else if (k === "text") n.textContent = attrs[k];
+      else if (k === "html") { /* intentionally unused */ }
+      else if (k.indexOf("on") === 0 && typeof attrs[k] === "function") n.addEventListener(k.slice(2), attrs[k]);
+      else if (attrs[k] != null) n.setAttribute(k, attrs[k]);
+    });
+    if (kids) kids.forEach(function (c) { if (c) n.appendChild(c); });
+    return n;
+  }
+  function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+  function root() { return document.getElementById("app"); }
+
+  // ---------- PROVENANCE MARK ----------
+  function provMark(tag) {
+    if (tag === "hard") return el("span", { class: "badge badge-hard", text: "★ LOCKED" });
+    if (tag === "hers") return el("span", { class: "prov", title: "On Mom's list", text: "*" });
+    if (tag === "mentioned") return el("span", { class: "prov prov2", title: "Dad called this out", text: "**" });
+    return null; // 'add' = no mark
+  }
+
+  // ---------- HEADER ----------
+  function renderHeader() {
+    var tabs = el("div", { class: "tabs" }, [
+      el("button", { class: "tab" + (state.trip === "summer" ? " active" : ""), onclick: function () { setTrip("summer"); } }, [el("span", { text: "🚗 This Summer" })]),
+      el("button", { class: "tab" + (state.trip === "west" ? " active" : ""), onclick: function () { setTrip("west"); } }, [el("span", { text: "🏔 Next Year (West)" })])
+    ]);
+
+    var nameInput = el("input", {
+      class: "name-input", type: "text", placeholder: "type your name…", value: state.voter,
+      oninput: function (e) { state.voter = e.target.value; },
+      onchange: function () {
+        state.voter = state.voter.trim();
+        safeLocalSet("tv_name", state.voter);
+        var mk = sanitizeKey(state.voter);
+        ["summer", "west"].forEach(function (t) {
+          state.myVotes[t] = (state.allVotes[t] && state.allVotes[t][mk]) ? Object.assign({}, state.allVotes[t][mk]) : {};
+        });
+        render();
+      }
+    });
+
+    var status = el("span", { class: "status " + (state.connected ? "on" : "off"), text: state.connected ? "● synced" : "○ local only" });
+
+    var nameRow = el("div", { class: "name-row" }, [
+      el("label", { class: "name-label", text: "I am:" }), nameInput, status
+    ]);
+
+    var viewToggle = el("div", { class: "view-toggle" }, [
+      el("button", { class: "vt" + (state.view === "vote" ? " active" : ""), onclick: function () { state.view = "vote"; render(); } }, [el("span", { text: "Vote" })]),
+      el("button", { class: "vt" + (state.view === "results" ? " active" : ""), onclick: function () { state.view = "results"; render(); } }, [el("span", { text: "Results" })])
+    ]);
+
+    var legend = el("div", { class: "legend", text: "★ locked  ·  * on Mom's list  ·  ** Dad's pick  ·  tap ⓘ to learn about a place" });
+
+    return el("div", { class: "header" }, [
+      el("h1", { class: "title", text: "Schneider Family Trip Voter" }),
+      el("p", { class: "subtitle", text: DATA[state.trip].label + " — " + DATA[state.trip].sub }),
+      tabs, nameRow, viewToggle, legend
+    ]);
+  }
+
+  // ---------- INFO PANEL ----------
+  function buildInfoPanel(place) {
+    var panel = el("div", { class: "info-panel" });
+    var imgWrap = el("div", { class: "info-img loading-img" });
+    var body = el("div", { class: "info-body" }, [
+      el("div", { class: "info-what", text: "Loading…" }),
+      el("div", { class: "info-love" }, [ el("span", { class: "lbl lbl-love", text: "❤ Love it" }), el("span", { class: "info-love-txt", text: place.love || "" }) ]),
+      el("div", { class: "info-caution" }, [ el("span", { class: "lbl lbl-caution", text: "⚠ Or skip it" }), el("span", { class: "info-caution-txt", text: place.caution || "" }) ])
+    ]);
+    panel.appendChild(imgWrap);
+    panel.appendChild(body);
+
+    loadWiki(place.wiki, function (w) {
+      imgWrap.classList.remove("loading-img");
+      if (w.img) {
+        var im = el("img", { class: "wimg", src: w.img, alt: place.name, loading: "lazy" });
+        imgWrap.appendChild(im);
+      } else {
+        imgWrap.classList.add("no-img");
+        imgWrap.appendChild(el("span", { class: "no-img-txt", text: "🏞" }));
+      }
+      var what = body.querySelector(".info-what");
+      var extract = w.extract ? (w.extract.length > 260 ? w.extract.slice(0, 257) + "…" : w.extract) : "A memorable stop on the route.";
+      clear(what);
+      what.appendChild(document.createTextNode(extract + " "));
+      what.appendChild(el("a", { class: "wlink", href: w.url, target: "_blank", rel: "noopener", text: "Wikipedia ↗" }));
+    });
+    return panel;
+  }
+
+  // ---------- SCORE BUTTONS ----------
+  function scoreButtons(place) {
+    var current = state.myVotes[state.trip][place.id] || 0;
+    var wrap = el("div", { class: "scores" });
+    for (var s = 1; s <= 5; s++) (function (score) {
+      var b = el("button", { class: "score" + (current === score ? " picked" : ""), text: String(score), title: score === 1 ? "meh" : score === 5 ? "must-see" : "" });
+      b.addEventListener("click", function () {
+        if (state.myVotes[state.trip][place.id] === score) writeVote(state.trip, place.id, null);
+        else writeVote(state.trip, place.id, score);
+        render();
+      });
+      wrap.appendChild(b);
+    })(s);
+    return wrap;
+  }
+
+  // ---------- VOTE VIEW ----------
+  function renderVote() {
+    var trip = DATA[state.trip];
+    var container = el("div", { class: "content" });
+
+    if (!state.voter) {
+      container.appendChild(el("div", { class: "notice", text: "👆 Enter your name above to start. Score each place 1 (meh) to 5 (must-see). Skip anything you don't care about, and tap a number again to clear it. Not sure what a place is? Tap ⓘ." }));
+    } else {
+      var total = 0, done = 0;
+      trip.groups.forEach(function (g) { g.places.forEach(function () { total++; }); });
+      Object.keys(state.myVotes[state.trip]).forEach(function () { done++; });
+      container.appendChild(el("div", { class: "progress", text: state.voter + " — scored " + done + " of " + total }));
+    }
+
+    trip.groups.forEach(function (g) {
+      var rows = el("div", { class: "rows" });
+      g.places.forEach(function (p) {
+        var infoBtn = el("button", { class: "info-btn" + (state.openInfo[p.id] ? " open" : ""), text: "ⓘ", title: "Learn about " + p.name });
+        infoBtn.addEventListener("click", function () {
+          state.openInfo[p.id] = !state.openInfo[p.id];
+          render();
+        });
+        var nameRow = el("div", { class: "pname-row" }, [ el("span", { class: "pname", text: p.name }), provMark(p.tag) ]);
+        var info = el("div", { class: "pinfo" }, [ nameRow, p.note ? el("div", { class: "pnote", text: p.note }) : null ]);
+        var topRow = el("div", { class: "prow" }, [ el("div", { class: "pleft" }, [infoBtn, info]), scoreButtons(p) ]);
+        var cell = el("div", { class: "pcell" }, [topRow]);
+        if (state.openInfo[p.id]) cell.appendChild(buildInfoPanel(p));
+        rows.appendChild(cell);
+      });
+      var det = el("details", { class: "group" }, [ el("summary", { class: "gsummary", text: g.state + "  (" + g.places.length + ")" }), rows ]);
+      det.open = true;
+      container.appendChild(det);
+    });
+    return container;
+  }
+
+  // ---------- RESULTS ----------
+  function aggregate(trip) {
+    var votes = state.allVotes[trip] || {};
+    var agg = {}, voters = {};
+    Object.keys(votes).forEach(function (vk) {
+      voters[vk] = true;
+      var obj = votes[vk] || {};
+      Object.keys(obj).forEach(function (pid) {
+        var sc = Number(obj[pid]);
+        if (!sc) return;
+        if (!agg[pid]) agg[pid] = { sum: 0, count: 0 };
+        agg[pid].sum += sc; agg[pid].count += 1;
+      });
+    });
+    return { agg: agg, voterCount: Object.keys(voters).length };
+  }
+
+  function metaLookup(trip) {
+    var meta = {};
+    DATA[trip].groups.forEach(function (g) { g.places.forEach(function (p) { meta[p.id] = { name: p.name, state: g.state, tag: p.tag, region: p.region }; }); });
+    return meta;
+  }
+
+  function renderResults() {
+    var container = el("div", { class: "content" });
+    var res = aggregate(state.trip);
+    var meta = metaLookup(state.trip);
+
+    container.appendChild(el("div", { class: "results-head", text: "Ranked by average score · " + res.voterCount + " voter(s)" }));
+
+    // Plan A/B tally for west
+    if (state.trip === "west") {
+      var zone = { sw: { s: 0, c: 0 }, north: { s: 0, c: 0 } };
+      Object.keys(res.agg).forEach(function (pid) {
+        var m = meta[pid]; if (!m) return;
+        var a = res.agg[pid];
+        if (m.region === "sw") { zone.sw.s += a.sum; zone.sw.c += a.count; }
+        else if (m.region === "north") { zone.north.s += a.sum; zone.north.c += a.count; }
+      });
+      var swAvg = zone.sw.c ? (zone.sw.s / zone.sw.c) : 0;
+      var noAvg = zone.north.c ? (zone.north.s / zone.north.c) : 0;
+      var lead = swAvg === noAvg ? "tied" : (swAvg > noAvg ? "Plan A (Southwest) leads" : "Plan B (Northern) leads");
+      var tally = el("div", { class: "abtally" }, [
+        el("div", { class: "ab ab-a" + (swAvg >= noAvg && swAvg > 0 ? " win" : "") }, [ el("div", { class: "ab-lbl", text: "Plan A · Southwest" }), el("div", { class: "ab-avg", text: swAvg ? swAvg.toFixed(2) : "—" }) ]),
+        el("div", { class: "ab-vs", text: lead }),
+        el("div", { class: "ab ab-b" + (noAvg > swAvg ? " win" : "") }, [ el("div", { class: "ab-lbl", text: "Plan B · Northern" }), el("div", { class: "ab-avg", text: noAvg ? noAvg.toFixed(2) : "—" }) ])
+      ]);
+      container.appendChild(tally);
+    }
+
+    var ranked = Object.keys(res.agg).map(function (pid) {
+      var a = res.agg[pid];
+      return { id: pid, avg: a.sum / a.count, count: a.count, meta: meta[pid] || { name: pid, state: "" } };
+    }).sort(function (x, y) { return (y.avg - x.avg) || (y.count - x.count); });
+
+    if (ranked.length === 0) {
+      container.appendChild(el("div", { class: "notice", text: "No votes yet. Switch to Vote, make sure everyone's entered a name, and score some places." }));
+      return container;
+    }
+
+    // copy button
+    var copyBtn = el("button", { class: "copy-btn", text: "📋 Copy ranked list" });
+    copyBtn.addEventListener("click", function () {
+      var lines = [DATA[state.trip].label + " — ranked (" + res.voterCount + " voters)"];
+      ranked.forEach(function (r, i) { lines.push((i + 1) + ". " + r.meta.name + " (" + r.meta.state + ") — avg " + r.avg.toFixed(1) + " / " + r.count + " votes"); });
+      var text = lines.join("\n");
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () { copyBtn.textContent = "✓ Copied!"; setTimeout(function () { copyBtn.textContent = "📋 Copy ranked list"; }, 1800); });
+        } else { throw new Error("no clipboard"); }
+      } catch (e) {
+        // fallback: show a textarea to copy manually
+        var ta = el("textarea", { class: "copy-fallback" });
+        ta.value = text; container.insertBefore(ta, list); ta.select();
+      }
+    });
+    container.appendChild(copyBtn);
+
+    var list = el("div", { class: "rank-list" });
+    ranked.forEach(function (r, i) {
+      var bar = el("div", { class: "bar" }, [el("div", { class: "bar-fill" })]);
+      bar.firstChild.style.width = ((r.avg / 5) * 100).toFixed(0) + "%";
+      var nameRow = el("div", { class: "rank-name-row" }, [
+        el("span", { class: "rank-name", text: r.meta.name }),
+        r.meta.tag === "hard" ? el("span", { class: "badge badge-hard", text: "★" }) : null,
+        r.meta.tag === "hers" ? el("span", { class: "prov", text: "*" }) : null,
+        r.meta.tag === "mentioned" ? el("span", { class: "prov prov2", text: "**" }) : null,
+        el("span", { class: "rank-state", text: r.meta.state })
+      ]);
+      list.appendChild(el("div", { class: "rank-row" }, [
+        el("div", { class: "rank-num", text: String(i + 1) }),
+        el("div", { class: "rank-main" }, [nameRow, bar]),
+        el("div", { class: "rank-score" }, [ el("div", { class: "rank-avg", text: r.avg.toFixed(1) }), el("div", { class: "rank-count", text: r.count + " vote" + (r.count === 1 ? "" : "s") }) ])
+      ]));
+    });
+    container.appendChild(list);
+    return container;
+  }
+
+  // ---------- RENDER ----------
+  function render() {
+    var r = root();
+    clear(r);
+    r.appendChild(renderHeader());
+    r.appendChild(state.view === "vote" ? renderVote() : renderResults());
+  }
+
+  function setTrip(trip) {
+    state.trip = trip;
+    var mk = sanitizeKey(state.voter);
+    state.myVotes[trip] = (state.allVotes[trip] && state.allVotes[trip][mk]) ? Object.assign({}, state.allVotes[trip][mk]) : (state.myVotes[trip] || {});
+    render();
+  }
+
+  // ---------- INIT ----------
+  function init() {
+    var saved = safeLocalGet("tv_name");
+    if (saved) state.voter = saved;
+    render();
+    // try firebase now, and retry once shortly in case SDK/config loads late
+    if (!initFirebase()) {
+      var tries = 0;
+      var iv = setInterval(function () {
+        tries++;
+        if (initFirebase() || tries > 20) { clearInterval(iv); render(); }
+      }, 250);
+    }
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+
+  window.__tv = { state: state };
+})();
+  </script>
+</body>
+</html>
