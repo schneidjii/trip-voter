@@ -102,6 +102,53 @@
   .rank-avg{font-size:1.15rem;font-weight:800;color:var(--forest)}
   .rank-count{font-size:.68rem;color:var(--muted)}
   .footer{text-align:center;font-size:.7rem;color:var(--muted);padding:16px 0 4px}
+  .title{cursor:default;user-select:none}
+  /* parent bar */
+  .parent-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    margin-top:10px;padding:8px 10px;background:#1f3d2b;border-radius:10px;flex-wrap:wrap}
+  .parent-tag{color:#e8b04b;font-weight:700;font-size:.8rem}
+  .reveal-btn{background:var(--gold);color:#3a2e10;border:none;border-radius:8px;padding:8px 12px;
+    font-weight:800;font-size:.82rem;cursor:pointer}
+  .reveal-btn.hide{background:#caa; color:#4a1f1f}
+  .vt-parent.active{background:#1f3d2b;color:#fff}
+  /* PIN pad */
+  .pin-overlay{position:fixed;inset:0;background:rgba(20,24,18,.7);display:flex;align-items:center;
+    justify-content:center;z-index:100;padding:20px}
+  .pin-box{background:#fff;border-radius:16px;padding:20px;width:100%;max-width:280px;text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,.4)}
+  .pin-title{font-weight:800;color:var(--forest);margin-bottom:12px}
+  .pin-display{font-size:1.3rem;letter-spacing:4px;min-height:32px;color:var(--ink);margin-bottom:12px;
+    font-weight:700}
+  .pin-display.err{color:var(--hard);letter-spacing:normal;font-size:1rem}
+  .pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .pin-key{padding:14px;border:1px solid var(--line);background:#fbfaf5;border-radius:10px;
+    font-size:1.1rem;font-weight:700;cursor:pointer}
+  .pin-key.ok{background:var(--forest);color:#fff;border-color:var(--forest)}
+  .pin-key.clr{background:#f0e6e6}
+  .pin-cancel{margin-top:12px;background:none;border:none;color:var(--muted);cursor:pointer;
+    font-size:.85rem;text-decoration:underline}
+  /* grid */
+  .grid-controls{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+  .grid-hint{font-size:.78rem;color:var(--muted);font-weight:600}
+  .grid-sort{border:1px solid var(--pine);background:#fff;color:var(--pine);border-radius:8px;
+    padding:7px 11px;font-weight:700;font-size:.8rem;cursor:pointer}
+  .grid-sort.on{background:var(--pine);color:#fff}
+  .grid-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .grid-table{border-collapse:collapse;font-size:.8rem;width:100%}
+  .grid-table th,.grid-table td{border:1px solid #eee;text-align:center;padding:5px 6px;white-space:nowrap}
+  .gh{background:#f3f0e6;font-weight:800;color:var(--forest);position:sticky;top:0;font-size:.72rem}
+  .gh-place,.gc-place{text-align:left;position:sticky;left:0;background:#fbfaf5;z-index:2;max-width:170px;
+    white-space:normal}
+  .gh-place{z-index:3}
+  .gc-name{font-weight:600;font-size:.78rem}
+  .gc-voter{max-width:70px;overflow:hidden;text-overflow:ellipsis}
+  .gc-score{font-weight:700;color:#2a2a2a}
+  .gc-empty{color:#ccc;background:#fafafa}
+  .gc-avg{font-weight:800;color:var(--forest);background:#f7f5ee}
+  .gc-ctrl.hot{background:#fde2da}
+  .gc-ctrl.warm{background:#fbf1d8}
+  .gc-ctrl.cool{background:#e7f2e7}
+  .grid-key{font-size:.68rem;color:var(--muted);margin-top:8px;padding:2px}
 </style>
 </head>
 <body>
@@ -582,6 +629,9 @@ window.TRIP_DATA = {
 
   var DATA = window.TRIP_DATA;
 
+  // ==== Parent PIN — CHANGE THIS to your own 4+ digit code ====
+  var PARENT_PIN = "2027";
+
   // ---------- STATE ----------
   var state = {
     trip: "summer",
@@ -592,7 +642,14 @@ window.TRIP_DATA = {
     connected: false,
     saveTimers: {},
     wikiCache: {},
-    openInfo: {} // placeId -> true
+    openInfo: {}, // placeId -> true
+    revealed: false,      // global flag from Firebase: results public?
+    parentUnlocked: false, // this device/session unlocked via PIN
+    gridSortCtrl: false,  // grid sorted by controversy?
+    titleTaps: 0,
+    titleTapTimer: null,
+    showPinPad: false,
+    pinError: false
   };
 
   // ---------- UTIL ----------
@@ -627,7 +684,18 @@ window.TRIP_DATA = {
         render();
       });
     });
+    // global reveal flag
+    db.ref("tripVoter/config/revealed").on("value", function (snap) {
+      state.revealed = snap.val() === true;
+      render();
+    });
     return true;
+  }
+
+  function setRevealed(val) {
+    state.revealed = val;
+    if (db) db.ref("tripVoter/config/revealed").set(val === true);
+    render();
   }
 
   function writeVote(trip, placeId, score) {
@@ -714,18 +782,81 @@ window.TRIP_DATA = {
       el("label", { class: "name-label", text: "I am:" }), nameInput, status
     ]);
 
-    var viewToggle = el("div", { class: "view-toggle" }, [
-      el("button", { class: "vt" + (state.view === "vote" ? " active" : ""), onclick: function () { state.view = "vote"; render(); } }, [el("span", { text: "Vote" })]),
-      el("button", { class: "vt" + (state.view === "results" ? " active" : ""), onclick: function () { state.view = "results"; render(); } }, [el("span", { text: "Results" })])
-    ]);
+    // View toggle depends on reveal state + parent unlock.
+    // Public sees Results only after reveal. Parent (PIN) always sees Grid + can reveal.
+    var toggleKids = [
+      el("button", { class: "vt" + (state.view === "vote" ? " active" : ""), onclick: function () { state.view = "vote"; render(); } }, [el("span", { text: "Vote" })])
+    ];
+    if (state.revealed) {
+      toggleKids.push(el("button", { class: "vt" + (state.view === "results" ? " active" : ""), onclick: function () { state.view = "results"; render(); } }, [el("span", { text: "Results" })]));
+    }
+    if (state.parentUnlocked) {
+      toggleKids.push(el("button", { class: "vt" + (state.view === "results" ? " active" : ""), onclick: function () { state.view = "results"; render(); } }, [el("span", { text: "Ranked" })]));
+      toggleKids.push(el("button", { class: "vt vt-parent" + (state.view === "grid" ? " active" : ""), onclick: function () { state.view = "grid"; render(); } }, [el("span", { text: "🔒 Grid" })]));
+    }
+    var viewToggle = el("div", { class: "view-toggle" }, toggleKids);
 
     var legend = el("div", { class: "legend", text: "★ locked  ·  * on Mom's list  ·  ** Dad's pick  ·  tap ⓘ to learn about a place" });
 
-    return el("div", { class: "header" }, [
-      el("h1", { class: "title", text: "Schneider Family Trip Voter" }),
-      el("p", { class: "subtitle", text: DATA[state.trip].label + " — " + DATA[state.trip].sub }),
-      tabs, nameRow, viewToggle, legend
+    // Secret entry: tap the title 5x quickly to open the PIN pad.
+    var title = el("h1", { class: "title", text: "Schneider Family Trip Voter" });
+    title.addEventListener("click", function () {
+      if (state.parentUnlocked) return;
+      state.titleTaps++;
+      if (state.titleTapTimer) clearTimeout(state.titleTapTimer);
+      state.titleTapTimer = setTimeout(function () { state.titleTaps = 0; }, 1200);
+      if (state.titleTaps >= 5) {
+        state.titleTaps = 0;
+        state.showPinPad = true;
+        state.pinError = false;
+        render();
+      }
+    });
+
+    var kids = [ title, el("p", { class: "subtitle", text: DATA[state.trip].label + " — " + DATA[state.trip].sub }), tabs, nameRow, viewToggle, legend ];
+    if (state.parentUnlocked) {
+      kids.push(el("div", { class: "parent-bar" }, [
+        el("span", { class: "parent-tag", text: "👑 Parent view unlocked" }),
+        state.revealed
+          ? el("button", { class: "reveal-btn hide", onclick: function () { setRevealed(false); } }, [el("span", { text: "Hide results from everyone" })])
+          : el("button", { class: "reveal-btn", onclick: function () { setRevealed(true); } }, [el("span", { text: "📣 Reveal results to everyone" })])
+      ]));
+    }
+    return el("div", { class: "header" }, kids);
+  }
+
+  // ---------- PIN PAD ----------
+  function renderPinPad() {
+    var overlay = el("div", { class: "pin-overlay" });
+    var display = el("div", { class: "pin-display", text: "" });
+    var entered = "";
+    function refresh() { display.textContent = entered.replace(/./g, "•") || "enter PIN"; }
+    refresh();
+    var pad = el("div", { class: "pin-grid" });
+    ["1","2","3","4","5","6","7","8","9","clr","0","ok"].forEach(function (k) {
+      var b = el("button", { class: "pin-key" + (k === "ok" ? " ok" : k === "clr" ? " clr" : ""), text: k === "clr" ? "⌫" : k === "ok" ? "OK" : k });
+      b.addEventListener("click", function () {
+        if (k === "clr") { entered = entered.slice(0, -1); refresh(); return; }
+        if (k === "ok") {
+          if (entered === PARENT_PIN) {
+            state.parentUnlocked = true; state.showPinPad = false; state.view = "grid"; render();
+          } else {
+            state.pinError = true; entered = ""; refresh();
+            display.textContent = "wrong PIN"; display.classList.add("err");
+          }
+          return;
+        }
+        if (entered.length < 8) { entered += k; refresh(); display.classList.remove("err"); }
+      });
+      pad.appendChild(b);
+    });
+    var box = el("div", { class: "pin-box" }, [
+      el("div", { class: "pin-title", text: "Parent access" }),
+      display, pad,
+      el("button", { class: "pin-cancel", onclick: function () { state.showPinPad = false; render(); } }, [el("span", { text: "Cancel" })])
     ]);
+    overlay.appendChild(box);
+    return overlay;
   }
 
   // ---------- INFO PANEL ----------
@@ -909,12 +1040,111 @@ window.TRIP_DATA = {
     return container;
   }
 
+  // ---------- GRID / MATRIX (parent-only) ----------
+  function stddev(arr) {
+    if (arr.length < 2) return 0;
+    var m = arr.reduce(function (a, b) { return a + b; }, 0) / arr.length;
+    var v = arr.reduce(function (a, b) { return a + (b - m) * (b - m); }, 0) / arr.length;
+    return Math.sqrt(v);
+  }
+  function scoreColor(s) {
+    // 1 red → 5 green
+    var colors = { 1: "#e07a5f", 2: "#e8a86b", 3: "#e8c86b", 4: "#a8c67a", 5: "#6fae6f" };
+    return colors[s] || "#eee";
+  }
+  function renderGrid() {
+    var trip = state.trip;
+    var votes = state.allVotes[trip] || {};
+    var voterKeys = Object.keys(votes);
+    var container = el("div", { class: "content" });
+
+    if (voterKeys.length === 0) {
+      container.appendChild(el("div", { class: "notice", text: "No votes yet — the grid fills in as people vote." }));
+      return container;
+    }
+
+    // display names: use the raw key (that's what they typed, sanitized)
+    var meta = metaLookup(trip);
+
+    // build rows: one per place that has at least one vote OR keep all? Show all places for completeness.
+    var rows = [];
+    DATA[trip].groups.forEach(function (g) {
+      g.places.forEach(function (p) {
+        var scores = [];
+        var cells = voterKeys.map(function (vk) {
+          var s = votes[vk] && votes[vk][p.id] ? Number(votes[vk][p.id]) : 0;
+          if (s) scores.push(s);
+          return s;
+        });
+        var avg = scores.length ? (scores.reduce(function (a, b) { return a + b; }, 0) / scores.length) : 0;
+        var ctrl = scores.length >= 2 ? stddev(scores) : 0;
+        var spread = scores.length >= 2 ? (Math.max.apply(null, scores) - Math.min.apply(null, scores)) : 0;
+        rows.push({ place: p, state: g.state, cells: cells, avg: avg, ctrl: ctrl, spread: spread, n: scores.length });
+      });
+    });
+
+    if (state.gridSortCtrl) {
+      rows = rows.slice().sort(function (a, b) { return b.ctrl - a.ctrl || b.n - a.n; });
+    }
+
+    // controls
+    var controls = el("div", { class: "grid-controls" }, [
+      el("span", { class: "grid-hint", text: voterKeys.length + " voters · " + rows.length + " places" }),
+      el("button", { class: "grid-sort" + (state.gridSortCtrl ? " on" : ""), onclick: function () { state.gridSortCtrl = !state.gridSortCtrl; render(); } },
+        [el("span", { text: state.gridSortCtrl ? "↩ Sort by state" : "⚡ Sort by controversy" })])
+    ]);
+    container.appendChild(controls);
+
+    // table
+    var table = el("table", { class: "grid-table" });
+    var thead = el("tr", {}, [ el("th", { class: "gh gh-place", text: "Place" }) ]);
+    voterKeys.forEach(function (vk) { thead.appendChild(el("th", { class: "gh gh-voter", text: vk })); });
+    thead.appendChild(el("th", { class: "gh gh-avg", text: "Avg" }));
+    thead.appendChild(el("th", { class: "gh gh-ctrl", text: "Split" }));
+    table.appendChild(thead);
+
+    rows.forEach(function (r) {
+      var tr = el("tr", {});
+      var nameCell = el("td", { class: "gc gc-place" }, [
+        el("span", { class: "gc-name", text: r.place.name }),
+        provMark(r.place.tag)
+      ]);
+      tr.appendChild(nameCell);
+      r.cells.forEach(function (s) {
+        var td = el("td", { class: "gc gc-score" }, [ el("span", { text: s ? String(s) : "·" }) ]);
+        if (s) td.style.background = scoreColor(s);
+        else td.classList.add("gc-empty");
+        tr.appendChild(td);
+      });
+      tr.appendChild(el("td", { class: "gc gc-avg", text: r.avg ? r.avg.toFixed(1) : "–" }));
+      // controversy cell: color by spread
+      var ctrlClass = "gc gc-ctrl";
+      if (r.ctrl >= 1.5) ctrlClass += " hot";
+      else if (r.ctrl >= 0.9) ctrlClass += " warm";
+      else if (r.n >= 2) ctrlClass += " cool";
+      var ctrlTxt = r.n < 2 ? "–" : (r.ctrl >= 1.5 ? "🔥" : r.ctrl >= 0.9 ? "•" : "✓");
+      var td = el("td", { class: ctrlClass, title: r.n >= 2 ? ("σ=" + r.ctrl.toFixed(2) + ", range " + r.spread) : "needs 2+ votes" }, [ el("span", { text: ctrlTxt }) ]);
+      tr.appendChild(td);
+      table.appendChild(tr);
+    });
+
+    var scroller = el("div", { class: "grid-scroll" }, [table]);
+    container.appendChild(scroller);
+    container.appendChild(el("div", { class: "grid-key", text: "🔥 big disagreement · • some spread · ✓ consensus — cell color = score (red 1 → green 5)" }));
+    return container;
+  }
+
   // ---------- RENDER ----------
   function render() {
     var r = root();
     clear(r);
     r.appendChild(renderHeader());
-    r.appendChild(state.view === "vote" ? renderVote() : renderResults());
+    var body;
+    if (state.view === "grid" && state.parentUnlocked) body = renderGrid();
+    else if (state.view === "results" && (state.revealed || state.parentUnlocked)) body = renderResults();
+    else body = renderVote();
+    r.appendChild(body);
+    if (state.showPinPad) r.appendChild(renderPinPad());
   }
 
   function setTrip(trip) {
